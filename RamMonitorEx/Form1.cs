@@ -2,7 +2,9 @@
 using System.Drawing;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
-using RamMonitorEx.Controls;
+using RamMonitorEx.Controls.RamMonitorView;
+using RamMonitorEx.Controls.LineGraph;
+using RamMonitorEx.Forms;
 using Timer = System.Windows.Forms.Timer;
 
 namespace WindowsFormsApp1
@@ -11,7 +13,6 @@ namespace WindowsFormsApp1
     {
         private DockPanel _dockPanel;
         private MenuStrip _menuStrip;
-        private int _graphPaneSequence = 0;
 
         private LineGraphControl lineGraph;
         private Timer dataTimer;
@@ -52,12 +53,30 @@ namespace WindowsFormsApp1
             // ファイルメニュー
             ToolStripMenuItem fileMenu = new ToolStripMenuItem("ファイル(&F)");
 
-            // 新規追加メニュー
-            ToolStripMenuItem newGraphItem = new ToolStripMenuItem("新規追加(&N)");
+            // 新規グラフメニュー
+            ToolStripMenuItem newGraphItem = new ToolStripMenuItem("新規グラフ(&N)");
             newGraphItem.ShortcutKeys = Keys.Control | Keys.N;
             newGraphItem.Click += NewGraphItem_Click;
-
             fileMenu.DropDownItems.Add(newGraphItem);
+
+            // 名前を指定して新規グラフ
+            ToolStripMenuItem newGraphWithNameItem = new ToolStripMenuItem("名前を指定して新規グラフ(&G)...");
+            newGraphWithNameItem.Click += NewGraphWithNameItem_Click;
+            fileMenu.DropDownItems.Add(newGraphWithNameItem);
+
+            fileMenu.DropDownItems.Add(new ToolStripSeparator());
+
+            // 新規RAMモニタメニュー
+            ToolStripMenuItem newRamMonitorItem = new ToolStripMenuItem("新規RAMモニタ(&M)");
+            newRamMonitorItem.ShortcutKeys = Keys.Control | Keys.M;
+            newRamMonitorItem.Click += NewRamMonitorItem_Click;
+            fileMenu.DropDownItems.Add(newRamMonitorItem);
+
+            // 名前を指定して新規RAMモニタ
+            ToolStripMenuItem newRamMonitorWithNameItem = new ToolStripMenuItem("名前を指定して新規RAMモニタ(&A)...");
+            newRamMonitorWithNameItem.Click += NewRamMonitorWithNameItem_Click;
+            fileMenu.DropDownItems.Add(newRamMonitorWithNameItem);
+
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
 
             // RamMonitorView サンプル表示メニュー
@@ -90,15 +109,97 @@ namespace WindowsFormsApp1
         }
 
         /// <summary>
+        /// 名前を指定して新規グラフペイン追加メニュークリック
+        /// </summary>
+        private void NewGraphWithNameItem_Click(object sender, EventArgs e)
+        {
+            AddNewGraphPaneWithName();
+        }
+
+        /// <summary>
+        /// 新規RAMモニタペイン追加メニュークリック
+        /// </summary>
+        private void NewRamMonitorItem_Click(object sender, EventArgs e)
+        {
+            AddNewRamMonitorPane();
+        }
+
+        /// <summary>
+        /// 名前を指定して新規RAMモニタペイン追加メニュークリック
+        /// </summary>
+        private void NewRamMonitorWithNameItem_Click(object sender, EventArgs e)
+        {
+            AddNewRamMonitorPaneWithName();
+        }
+
+        /// <summary>
         /// 新しいグラフペインを追加
         /// </summary>
         private void AddNewGraphPane()
         {
-            _graphPaneSequence++;
-            string title = $"グラフ {_graphPaneSequence}";
-            
-            GraphPane pane = new GraphPane(title);
+            string paneName = PaneNameManager.Instance.RegisterNewName("折れ線グラフパネル");
+            GraphPane pane = new GraphPane(paneName);
             pane.Show(_dockPanel, DockState.Document);
+        }
+
+        /// <summary>
+        /// 名前を指定して新しいグラフペインを追加
+        /// </summary>
+        private void AddNewGraphPaneWithName()
+        {
+            string defaultName = PaneNameManager.Instance.RegisterNewName("折れ線グラフパネル");
+            PaneNameManager.Instance.UnregisterName(defaultName); // 一旦解除
+
+            using (PaneNameDialog dialog = new PaneNameDialog(defaultName, "グラフパネル名を入力してください:"))
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
+                    if (PaneNameManager.Instance.RegisterCustomName(dialog.PaneName))
+                    {
+                        GraphPane pane = new GraphPane(dialog.PaneName);
+                        pane.Show(_dockPanel, DockState.Document);
+                    }
+                    else
+                    {
+                        MessageBox.Show("パネル名の登録に失敗しました。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 新しいRAMモニタペインを追加
+        /// </summary>
+        private void AddNewRamMonitorPane()
+        {
+            string paneName = PaneNameManager.Instance.RegisterNewName("RAMモニタパネル");
+            RamMonitorViewPane pane = new RamMonitorViewPane(paneName);
+            pane.Show(_dockPanel, DockState.Document);
+        }
+
+        /// <summary>
+        /// 名前を指定して新しいRAMモニタペインを追加
+        /// </summary>
+        private void AddNewRamMonitorPaneWithName()
+        {
+            string defaultName = PaneNameManager.Instance.RegisterNewName("RAMモニタパネル");
+            PaneNameManager.Instance.UnregisterName(defaultName); // 一旦解除
+
+            using (PaneNameDialog dialog = new PaneNameDialog(defaultName, "RAMモニタパネル名を入力してください:"))
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
+                    if (PaneNameManager.Instance.RegisterCustomName(dialog.PaneName))
+                    {
+                        RamMonitorViewPane pane = new RamMonitorViewPane(dialog.PaneName);
+                        pane.Show(_dockPanel, DockState.Document);
+                    }
+                    else
+                    {
+                        MessageBox.Show("パネル名の登録に失敗しました。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
         }
 
         private void InitializeLineGraph()

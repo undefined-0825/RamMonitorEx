@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace RamMonitorEx.Controls
+namespace RamMonitorEx.Controls.RamMonitorView
 {
     public class RamMonitorView : UserControl
     {
@@ -19,8 +19,12 @@ namespace RamMonitorEx.Controls
 
         private ValueTextAlignment _valueAlignment = ValueTextAlignment.Right;
         private Color _gridLineColor = Color.Gray;
-        private Color _commentForeColor = Color.DarkGray;
-        private Color _commentBackColor = Color.FromArgb(250, 250, 250);
+        private Color _commentForeColor = Color.Gray;
+        private Color _commentBackColor = Color.Black;
+
+        private Color _labelForeColor = Color.White;
+        private Color _valueForeColor = Color.White;
+        private Color _unitForeColor = Color.White;
 
         private int _panOffsetX = 0;
         private int _panOffsetY = 0;
@@ -143,6 +147,36 @@ namespace RamMonitorEx.Controls
             }
         }
 
+        public Color LabelForeColor
+        {
+            get => _labelForeColor;
+            set
+            {
+                _labelForeColor = value;
+                Invalidate();
+            }
+        }
+
+        public Color ValueForeColor
+        {
+            get => _valueForeColor;
+            set
+            {
+                _valueForeColor = value;
+                Invalidate();
+            }
+        }
+
+        public Color UnitForeColor
+        {
+            get => _unitForeColor;
+            set
+            {
+                _unitForeColor = value;
+                Invalidate();
+            }
+        }
+
         public bool ColumnResizeEnabled
         {
             get => _columnResizeEnabled;
@@ -160,8 +194,8 @@ namespace RamMonitorEx.Controls
         public RamMonitorView()
         {
             DoubleBuffered = true;
-            BackColor = Color.White;
-            ForeColor = Color.Black;
+            BackColor = Color.Black;
+            ForeColor = Color.White;
 
             SetStyle(ControlStyles.ResizeRedraw, true);
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
@@ -191,6 +225,43 @@ namespace RamMonitorEx.Controls
 
             _contextMenu.Items.Add(_gridLineMenuItem);
             _contextMenu.Items.Add(_headerMenuItem);
+            _contextMenu.Items.Add(new ToolStripSeparator());
+
+            // 全体メニュー
+            ToolStripMenuItem globalMenu = new ToolStripMenuItem("全体");
+
+            ToolStripMenuItem bgColorItem = new ToolStripMenuItem("背景色");
+            bgColorItem.Click += BackgroundColorMenuItem_Click;
+            globalMenu.DropDownItems.Add(bgColorItem);
+
+            ToolStripMenuItem fgColorItem = new ToolStripMenuItem("文字色");
+            fgColorItem.Click += ForegroundColorMenuItem_Click;
+            globalMenu.DropDownItems.Add(fgColorItem);
+
+            _contextMenu.Items.Add(globalMenu);
+
+            // セル文字色メニュー
+            ToolStripMenuItem cellColorMenu = new ToolStripMenuItem("セル文字色");
+
+            ToolStripMenuItem labelColorItem = new ToolStripMenuItem("ラベル列");
+            labelColorItem.Click += LabelColorMenuItem_Click;
+            cellColorMenu.DropDownItems.Add(labelColorItem);
+
+            ToolStripMenuItem valueColorItem = new ToolStripMenuItem("値列");
+            valueColorItem.Click += ValueColorMenuItem_Click;
+            cellColorMenu.DropDownItems.Add(valueColorItem);
+
+            ToolStripMenuItem unitColorItem = new ToolStripMenuItem("単位列");
+            unitColorItem.Click += UnitColorMenuItem_Click;
+            cellColorMenu.DropDownItems.Add(unitColorItem);
+
+            cellColorMenu.DropDownItems.Add(new ToolStripSeparator());
+
+            ToolStripMenuItem commentColorItem = new ToolStripMenuItem("コメント行");
+            commentColorItem.Click += CommentColorMenuItem_Click;
+            cellColorMenu.DropDownItems.Add(commentColorItem);
+
+            _contextMenu.Items.Add(cellColorMenu);
 
             this.ContextMenuStrip = _contextMenu;
         }
@@ -203,6 +274,78 @@ namespace RamMonitorEx.Controls
         private void HeaderMenuItem_Click(object? sender, EventArgs e)
         {
             HeaderVisible = _headerMenuItem.Checked;
+        }
+
+        private void BackgroundColorMenuItem_Click(object? sender, EventArgs e)
+        {
+            using (ColorDialog dialog = new ColorDialog())
+            {
+                dialog.Color = BackColor;
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    BackColor = dialog.Color;
+                }
+            }
+        }
+
+        private void ForegroundColorMenuItem_Click(object? sender, EventArgs e)
+        {
+            using (ColorDialog dialog = new ColorDialog())
+            {
+                dialog.Color = ForeColor;
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    ForeColor = dialog.Color;
+                }
+            }
+        }
+
+        private void LabelColorMenuItem_Click(object? sender, EventArgs e)
+        {
+            using (ColorDialog dialog = new ColorDialog())
+            {
+                dialog.Color = _labelForeColor;
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    LabelForeColor = dialog.Color;
+                }
+            }
+        }
+
+        private void ValueColorMenuItem_Click(object? sender, EventArgs e)
+        {
+            using (ColorDialog dialog = new ColorDialog())
+            {
+                dialog.Color = _valueForeColor;
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    ValueForeColor = dialog.Color;
+                }
+            }
+        }
+
+        private void UnitColorMenuItem_Click(object? sender, EventArgs e)
+        {
+            using (ColorDialog dialog = new ColorDialog())
+            {
+                dialog.Color = _unitForeColor;
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    UnitForeColor = dialog.Color;
+                }
+            }
+        }
+
+        private void CommentColorMenuItem_Click(object? sender, EventArgs e)
+        {
+            using (ColorDialog dialog = new ColorDialog())
+            {
+                dialog.Color = _commentForeColor;
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    CommentForeColor = dialog.Color;
+                }
+            }
         }
 
         public void AddDataRow(string label, string value, string unit)
@@ -293,7 +436,7 @@ namespace RamMonitorEx.Controls
             int y = -_panOffsetY;
             Rectangle headerRect = new Rectangle(x, y, _columnLayout.TotalWidth, _headerHeight);
 
-            using (Brush headerBrush = new SolidBrush(Color.FromArgb(240, 240, 240)))
+            using (Brush headerBrush = new SolidBrush(BackColor))
             {
                 g.FillRectangle(headerBrush, headerRect);
             }
@@ -350,10 +493,10 @@ namespace RamMonitorEx.Controls
         private void DrawDataRow(Graphics g, ValueDataRow row, int x, int y)
         {
             using (Pen gridPen = new Pen(_gridLineColor))
-            using (Brush textBrush = new SolidBrush(ForeColor))
             {
                 string[] texts = { row.LabelText, row.ValueText, row.UnitText };
                 StringAlignment[] alignments = { StringAlignment.Near, GetValueStringAlignment(), StringAlignment.Near };
+                Color[] colors = { _labelForeColor, _valueForeColor, _unitForeColor };
 
                 for (int i = 0; i < 3; i++)
                 {
@@ -367,7 +510,10 @@ namespace RamMonitorEx.Controls
                         LineAlignment = StringAlignment.Center
                     };
 
-                    g.DrawString(texts[i], Font, textBrush, cellRect, sf);
+                    using (Brush textBrush = new SolidBrush(colors[i]))
+                    {
+                        g.DrawString(texts[i], Font, textBrush, cellRect, sf);
+                    }
 
                     if (_gridLineVisible && i < 2)
                     {
@@ -387,7 +533,7 @@ namespace RamMonitorEx.Controls
         {
             Rectangle rowRect = new Rectangle(x, y, _columnLayout.TotalWidth, _rowHeight);
 
-            using (Brush bgBrush = new SolidBrush(_commentBackColor))
+            using (Brush bgBrush = new SolidBrush(BackColor))
             {
                 g.FillRectangle(bgBrush, rowRect);
             }

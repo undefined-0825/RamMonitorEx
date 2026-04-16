@@ -2,7 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
-using RamMonitorEx.Controls;
+using RamMonitorEx.Controls.LineGraph;
 
 namespace WindowsFormsApp1
 {
@@ -13,6 +13,7 @@ namespace WindowsFormsApp1
     {
         private Panel? _containerPanel;
         private LineGraphControl? _graphControl;
+        private string _paneName;
 
         /// <summary>
         /// コンストラクタ
@@ -25,6 +26,7 @@ namespace WindowsFormsApp1
                 throw new ArgumentNullException(nameof(title));
             }
 
+            _paneName = title;
             this.Text = title;
             this.TabText = title;
             this.ToolTipText = title;
@@ -32,6 +34,11 @@ namespace WindowsFormsApp1
 
             InitializeControls();
         }
+
+        /// <summary>
+        /// パネル名（一意の識別子）
+        /// </summary>
+        public string PaneName => _paneName;
 
         /// <summary>
         /// コントロールの初期化
@@ -99,6 +106,9 @@ namespace WindowsFormsApp1
         {
             if (disposing)
             {
+                // パネル名の登録を解除
+                PaneNameManager.Instance.UnregisterName(_paneName);
+
                 _graphControl?.Dispose();
                 _containerPanel?.Dispose();
             }

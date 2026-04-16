@@ -1,7 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
-using RamMonitorEx.Controls;
+using RamMonitorEx.Controls.LineGraph;
 
 namespace RamMonitorEx.Forms
 {

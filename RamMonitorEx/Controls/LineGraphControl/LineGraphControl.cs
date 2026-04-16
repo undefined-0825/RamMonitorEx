@@ -7,7 +7,7 @@ using System.Windows.Forms;
 using RamMonitorEx.Forms;
 using Timer = System.Windows.Forms.Timer;
 
-namespace RamMonitorEx.Controls
+namespace RamMonitorEx.Controls.LineGraph
 {
     /// <summary>
     /// •¡”Œn—ñ‚ÌÜ‚êüƒOƒ‰ƒt‚ğ‚‘¬•`‰æ‚·‚éUserControl

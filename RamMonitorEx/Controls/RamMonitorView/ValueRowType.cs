@@ -1,4 +1,4 @@
-namespace RamMonitorEx.Controls
+namespace RamMonitorEx.Controls.RamMonitorView
 {
     public enum ValueRowType
     {

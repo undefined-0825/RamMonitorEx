@@ -1,7 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
-using RamMonitorEx.Controls;
+using RamMonitorEx.Controls.RamMonitorView;
 using Timer = System.Windows.Forms.Timer;
 
 namespace WindowsFormsApp1
@@ -27,8 +27,6 @@ namespace WindowsFormsApp1
             {
                 Location = new Point(10, 10),
                 Size = new Size(400, 400),
-                BackColor = Color.White,
-                ForeColor = Color.Black,
                 GridLineVisible = true,
                 GridLineColor = Color.Gray,
                 HeaderVisible = true,

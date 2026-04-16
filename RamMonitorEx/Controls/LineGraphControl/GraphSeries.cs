@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 
-namespace RamMonitorEx.Controls
+namespace RamMonitorEx.Controls.LineGraph
 {
     /// <summary>
     /// 1本分の折れ線データを保持する系列クラス
