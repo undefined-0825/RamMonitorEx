@@ -156,6 +156,14 @@ namespace WindowsFormsApp1
         /// </summary>
         public RamMonitorView? RamMonitorView => _ramMonitorView;
 
+        /// <summary>
+        /// DockPanelの永続化用の文字列を取得
+        /// </summary>
+        protected override string GetPersistString()
+        {
+            return $"RamMonitorViewPane|{_paneName}";
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)

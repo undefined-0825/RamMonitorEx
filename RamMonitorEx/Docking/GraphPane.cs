@@ -14,6 +14,9 @@ namespace WindowsFormsApp1
         private Panel? _containerPanel;
         private LineGraphControl? _graphControl;
         private string _paneName;
+        private System.Windows.Forms.Timer? _updateTimer;
+        private Random _random = new Random();
+        private int _dataCounter = 0;
 
         /// <summary>
         /// コンストラクタ
@@ -74,6 +77,9 @@ namespace WindowsFormsApp1
 
             // 初期系列を追加（デモ用）
             AddDemoSeries();
+
+            // データ更新タイマーを開始
+            StartDataSimulation();
         }
 
         /// <summary>
@@ -98,14 +104,88 @@ namespace WindowsFormsApp1
         }
 
         /// <summary>
+        /// データシミュレーションを開始
+        /// </summary>
+        private void StartDataSimulation()
+        {
+            _updateTimer = new System.Windows.Forms.Timer();
+            _updateTimer.Interval = 100; // 0.1秒間隔
+            _updateTimer.Tick += UpdateTimer_Tick;
+            _updateTimer.Start();
+        }
+
+        /// <summary>
+        /// タイマーイベント - データを更新
+        /// </summary>
+        private void UpdateTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_graphControl == null) return;
+
+            // すべての系列にデータを追加
+            foreach (var series in _graphControl.Series)
+            {
+                float value;
+
+                // 系列名に応じたデータパターンを生成
+                if (series.Name.Contains("データ1"))
+                {
+                    // 波形パターン
+                    if (_dataCounter < 150)
+                    {
+                        value = (float)(_random.NextDouble() * 15 + 10);
+                    }
+                    else if (_dataCounter >= 150 && _dataCounter < 300)
+                    {
+                        value = (float)(_random.NextDouble() * 25 + 40);
+                    }
+                    else
+                    {
+                        value = (float)(_random.NextDouble() * 20 + 25);
+                    }
+                }
+                else if (series.Name.Contains("データ2"))
+                {
+                    // 緩やかな変化
+                    value = (float)(40 + Math.Sin(_dataCounter * 0.015) * 20 + _random.NextDouble() * 10);
+                }
+                else
+                {
+                    // デフォルトパターン
+                    value = (float)(_random.NextDouble() * 50 + 25);
+                }
+
+                series.AddValue(value);
+            }
+
+            _dataCounter++;
+            if (_dataCounter >= 600) _dataCounter = 0; // カウンターリセット
+        }
+
+        /// <summary>
         /// グラフコントロールへのアクセス（外部からデータ追加用）
         /// </summary>
         public LineGraphControl GraphControl => _graphControl;
+
+        /// <summary>
+        /// DockPanelの永続化用の文字列を取得
+        /// </summary>
+        protected override string GetPersistString()
+        {
+            return $"GraphPane|{_paneName}";
+        }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
+                // タイマーを停止・破棄
+                if (_updateTimer != null)
+                {
+                    _updateTimer.Stop();
+                    _updateTimer.Dispose();
+                    _updateTimer = null;
+                }
+
                 // パネル名の登録を解除
                 PaneNameManager.Instance.UnregisterName(_paneName);
 

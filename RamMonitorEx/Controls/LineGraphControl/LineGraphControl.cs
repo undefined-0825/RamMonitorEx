@@ -201,6 +201,11 @@ namespace RamMonitorEx.Controls.LineGraph
         }
 
         /// <summary>
+        /// 系列のリスト（読み取り専用）
+        /// </summary>
+        public IReadOnlyList<GraphSeries> SeriesList => seriesList.AsReadOnly();
+
+        /// <summary>
         /// エリアを塗りつぶすか（タスクマネージャスタイル）
         /// </summary>
         public bool FillArea
