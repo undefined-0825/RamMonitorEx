@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
@@ -27,9 +28,28 @@ namespace WindowsFormsApp1
         private Random random = new Random();
         private int dataCounter = 0;
 
+        private bool _runtimeInitialized;
+
         public Form1()
         {
             InitializeComponent();
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+
+            if (_runtimeInitialized)
+            {
+                return;
+            }
+
+            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
+            {
+                return;
+            }
+
+            _runtimeInitialized = true;
             _workspaceSerializer = new WorkspaceSerializer();
             InitializeDockPanel();
             InitializeMenu();
