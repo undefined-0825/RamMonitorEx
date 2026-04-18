@@ -39,6 +39,13 @@ namespace WindowsFormsApp1.Serialization
         [XmlArray("RamMonitorPanes")]
         [XmlArrayItem("RamMonitorPane")]
         public List<RamMonitorPaneConfig> RamMonitorPanes { get; set; } = new List<RamMonitorPaneConfig>();
+
+        /// <summary>
+        /// マルチレイアウトグリッドペインのリスト
+        /// </summary>
+        [XmlArray("MultiLayoutGridPanes")]
+        [XmlArrayItem("MultiLayoutGridPane")]
+        public List<MultiLayoutGridPaneConfig> MultiLayoutGridPanes { get; set; } = new List<MultiLayoutGridPaneConfig>();
     }
 
     /// <summary>
@@ -49,6 +56,7 @@ namespace WindowsFormsApp1.Serialization
         /// <summary>
         /// ペイン名（一意の識別子）
         /// </summary>
+        [XmlAttribute]
         public string PaneName { get; set; } = string.Empty;
 
         /// <summary>
@@ -109,8 +117,13 @@ namespace WindowsFormsApp1.Serialization
     /// </summary>
     public class GraphSeriesConfig
     {
+        [XmlAttribute]
         public string Name { get; set; } = string.Empty;
+
+        [XmlAttribute]
         public int ColorArgb { get; set; }
+
+        [XmlAttribute]
         public bool Visible { get; set; }
 
         [XmlIgnore]
@@ -129,6 +142,7 @@ namespace WindowsFormsApp1.Serialization
         /// <summary>
         /// ペイン名（一意の識別子）
         /// </summary>
+        [XmlAttribute]
         public string PaneName { get; set; } = string.Empty;
 
         /// <summary>
@@ -242,9 +256,13 @@ namespace WindowsFormsApp1.Serialization
     /// </summary>
     public class DataRowConfig
     {
+        [XmlAttribute]
         public int RowIndex { get; set; }
+
+        [XmlAttribute]
         public string LabelText { get; set; } = string.Empty;
-        public string ValueText { get; set; } = string.Empty;
+
+        [XmlAttribute]
         public string UnitText { get; set; } = string.Empty;
     }
 
@@ -253,7 +271,109 @@ namespace WindowsFormsApp1.Serialization
     /// </summary>
     public class CommentRowConfig
     {
+        [XmlAttribute]
         public int RowIndex { get; set; }
+
+        [XmlAttribute]
         public string CommentText { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// マルチレイアウトグリッドペインの設定
+    /// </summary>
+    public class MultiLayoutGridPaneConfig
+    {
+        /// <summary>
+        /// ペイン名（一意の識別子）
+        /// </summary>
+        [XmlAttribute]
+        public string PaneName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// マルチレイアウトグリッドの設定
+        /// </summary>
+        public MultiLayoutGridConfig GridConfig { get; set; } = new MultiLayoutGridConfig();
+    }
+
+    /// <summary>
+    /// マルチレイアウトグリッドの設定
+    /// </summary>
+    public class MultiLayoutGridConfig
+    {
+        public bool ShowGridLines { get; set; }
+        public int GridLineColorArgb { get; set; }
+        public int BackColorArgb { get; set; }
+        public int ForeColorArgb { get; set; }
+
+        [XmlArray("Rows")]
+        [XmlArrayItem("Row")]
+        public List<MultiLayoutGridRowConfig> Rows { get; set; } = new List<MultiLayoutGridRowConfig>();
+
+        [XmlIgnore]
+        public Color GridLineColor
+        {
+            get => Color.FromArgb(GridLineColorArgb);
+            set => GridLineColorArgb = value.ToArgb();
+        }
+
+        [XmlIgnore]
+        public Color BackColor
+        {
+            get => Color.FromArgb(BackColorArgb);
+            set => BackColorArgb = value.ToArgb();
+        }
+
+        [XmlIgnore]
+        public Color ForeColor
+        {
+            get => Color.FromArgb(ForeColorArgb);
+            set => ForeColorArgb = value.ToArgb();
+        }
+    }
+
+    /// <summary>
+    /// マルチレイアウトグリッド行の設定
+    /// </summary>
+    public class MultiLayoutGridRowConfig
+    {
+        [XmlAttribute]
+        public int RowIndex { get; set; }
+
+        [XmlAttribute]
+        public int Height { get; set; }
+
+        [XmlArray("Cells")]
+        [XmlArrayItem("Cell")]
+        public List<MultiLayoutGridCellConfig> Cells { get; set; } = new List<MultiLayoutGridCellConfig>();
+    }
+
+    /// <summary>
+    /// マルチレイアウトグリッドセルの設定
+    /// </summary>
+    public class MultiLayoutGridCellConfig
+    {
+        [XmlAttribute]
+        public int CellIndex { get; set; }
+
+        [XmlAttribute]
+        public string Text { get; set; } = string.Empty;
+
+        [XmlAttribute]
+        public bool IsVariable { get; set; }
+
+        [XmlAttribute]
+        public int Width { get; set; }
+
+        [XmlAttribute]
+        public int HorizontalAlignment { get; set; }
+
+        [XmlAttribute]
+        public int VerticalAlignment { get; set; }
+
+        [XmlAttribute]
+        public bool HasForeColor { get; set; }
+
+        [XmlAttribute]
+        public int ForeColorArgb { get; set; }
     }
 }

@@ -6,8 +6,10 @@ using System.Linq;
 using WeifenLuo.WinFormsUI.Docking;
 using RamMonitorEx.Controls.RamMonitorView;
 using RamMonitorEx.Controls.LineGraph;
+using RamMonitorEx.Controls.MultiLayoutGrid;
 using RamMonitorEx.Forms;
 using WindowsFormsApp1.Serialization;
+using WindowsFormsApp1.Docking;
 using Timer = System.Windows.Forms.Timer;
 
 namespace WindowsFormsApp1
@@ -72,6 +74,11 @@ namespace WindowsFormsApp1
             newGraphItem.Click += NewGraphWithNameItem_Click;
             fileMenu.DropDownItems.Add(newGraphItem);
 
+            // 新規マルチレイアウトグリッド
+            ToolStripMenuItem newMultiGridItem = new ToolStripMenuItem("新規マルチレイアウトグリッド(&L)...");
+            newMultiGridItem.Click += NewMultiLayoutGridWithNameItem_Click;
+            fileMenu.DropDownItems.Add(newMultiGridItem);
+
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
 
             // ワークスペースの保存・読み込み
@@ -120,6 +127,14 @@ namespace WindowsFormsApp1
         }
 
         /// <summary>
+        /// 名前を指定して新規マルチレイアウトグリッドペイン追加メニュークリック
+        /// </summary>
+        private void NewMultiLayoutGridWithNameItem_Click(object sender, EventArgs e)
+        {
+            AddNewMultiLayoutGridPaneWithName();
+        }
+
+        /// <summary>
         /// 名前を指定して新しいグラフペインを追加
         /// </summary>
         private void AddNewGraphPaneWithName()
@@ -159,6 +174,31 @@ namespace WindowsFormsApp1
                     if (PaneNameManager.Instance.RegisterCustomName(dialog.PaneName))
                     {
                         RamMonitorViewPane pane = new RamMonitorViewPane(dialog.PaneName);
+                        pane.Show(_dockPanel, DockState.Document);
+                    }
+                    else
+                    {
+                        MessageBox.Show("パネル名の登録に失敗しました。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 名前を指定して新しいマルチレイアウトグリッドペインを追加
+        /// </summary>
+        private void AddNewMultiLayoutGridPaneWithName()
+        {
+            string defaultName = PaneNameManager.Instance.RegisterNewName("マルチレイアウトグリッドパネル");
+            PaneNameManager.Instance.UnregisterName(defaultName); // 一旦解除
+
+            using (PaneNameDialog dialog = new PaneNameDialog(defaultName, "マルチレイアウトグリッドパネル名を入力してください:"))
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
+                    if (PaneNameManager.Instance.RegisterCustomName(dialog.PaneName))
+                    {
+                        MultiLayoutGridPane pane = new MultiLayoutGridPane(dialog.PaneName);
                         pane.Show(_dockPanel, DockState.Document);
                     }
                     else
@@ -292,8 +332,8 @@ namespace WindowsFormsApp1
         {
             using (SaveFileDialog dialog = new SaveFileDialog())
             {
-                dialog.Filter = "ワークスペースファイル (*.wsxml)|*.wsxml|すべてのファイル (*.*)|*.*";
-                dialog.DefaultExt = "wsxml";
+                dialog.Filter = "ワークスペースファイル (*.xml)|*.xml|すべてのファイル (*.*)|*.*";
+                dialog.DefaultExt = "xml";
                 dialog.AddExtension = true;
 
                 if (dialog.ShowDialog(this) == DialogResult.OK)
@@ -313,10 +353,8 @@ namespace WindowsFormsApp1
                     Name = Path.GetFileNameWithoutExtension(filePath)
                 };
 
-                // DockPanelのレイアウトを保存
                 config.DockPanelLayout = _workspaceSerializer.SaveDockPanelLayout(_dockPanel);
 
-                // 各ペインの設定を保存
                 foreach (var content in _dockPanel.Contents)
                 {
                     if (content is GraphPane graphPane)
@@ -327,17 +365,69 @@ namespace WindowsFormsApp1
                     {
                         config.RamMonitorPanes.Add(SaveRamMonitorPaneConfig(ramPane));
                     }
+                    else if (content is MultiLayoutGridPane multiPane)
+                    {
+                        config.MultiLayoutGridPanes.Add(SaveMultiLayoutGridPaneConfig(multiPane));
+                    }
                 }
 
                 _workspaceSerializer.Save(config, filePath);
-                MessageBox.Show($"ワークスペースを保存しました。\n{filePath}", "保存完了", 
+                MessageBox.Show($"ワークスペースを保存しました。\n{filePath}", "保存完了",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"保存中にエラーが発生しました。\n{ex.Message}", "エラー", 
+                MessageBox.Show($"保存中にエラーが発生しました。\n{ex.Message}", "エラー",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private MultiLayoutGridPaneConfig SaveMultiLayoutGridPaneConfig(MultiLayoutGridPane pane)
+        {
+            var config = new MultiLayoutGridPaneConfig
+            {
+                PaneName = pane.PaneName,
+                GridConfig = new MultiLayoutGridConfig()
+            };
+
+            var grid = pane.GridControl;
+            if (grid != null)
+            {
+                config.GridConfig.ShowGridLines = grid.ShowGridLines;
+                config.GridConfig.GridLineColor = grid.GridLineColor;
+                config.GridConfig.BackColor = grid.BackColor;
+                config.GridConfig.ForeColor = grid.ForeColor;
+
+                for (int rowIndex = 0; rowIndex < grid.Rows.Count; rowIndex++)
+                {
+                    var row = grid.Rows[rowIndex];
+                    var rowConfig = new MultiLayoutGridRowConfig
+                    {
+                        RowIndex = rowIndex,
+                        Height = row.Height
+                    };
+
+                    for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
+                    {
+                        var cell = row.Cells[cellIndex];
+                        rowConfig.Cells.Add(new MultiLayoutGridCellConfig
+                        {
+                            CellIndex = cellIndex,
+                            Text = cell.Text,
+                            IsVariable = cell.ValueProvider != null,
+                            Width = cell.Width,
+                            HorizontalAlignment = (int)cell.HorizontalAlignment,
+                            VerticalAlignment = (int)cell.VerticalAlignment,
+                            HasForeColor = cell.ForeColor.HasValue,
+                            ForeColorArgb = cell.ForeColor?.ToArgb() ?? Color.White.ToArgb()
+                        });
+                    }
+
+                    config.GridConfig.Rows.Add(rowConfig);
+                }
+            }
+
+            return config;
         }
 
         private GraphPaneConfig SaveGraphPaneConfig(GraphPane pane)
@@ -368,15 +458,14 @@ namespace WindowsFormsApp1
                 config.GraphConfig.PlotPaddingRight = padding.Right;
                 config.GraphConfig.PlotPaddingBottom = padding.Bottom;
 
-                // 系列の保存
                 foreach (var series in graph.SeriesList)
                 {
                     config.GraphConfig.Series.Add(new GraphSeriesConfig
-                    {
-                        Name = series.Name,
-                        Color = series.Color,
-                        Visible = series.Visible
-                    });
+                        {
+                            Name = series.Name,
+                            Color = series.Color,
+                            Visible = series.Visible
+                        });
                 }
             }
 
@@ -412,7 +501,6 @@ namespace WindowsFormsApp1
                 config.ViewConfig.ColumnResizeEnabled = view.ColumnResizeEnabled;
                 config.ViewConfig.PanEnabled = view.PanEnabled;
 
-                // 行データの保存
                 for (int i = 0; i < view.Rows.Count; i++)
                 {
                     var row = view.Rows[i];
@@ -422,7 +510,6 @@ namespace WindowsFormsApp1
                         {
                             RowIndex = i,
                             LabelText = dataRow.LabelText,
-                            ValueText = dataRow.ValueText,
                             UnitText = dataRow.UnitText
                         });
                     }
@@ -444,33 +531,28 @@ namespace WindowsFormsApp1
         {
             using (OpenFileDialog dialog = new OpenFileDialog())
             {
-                dialog.Filter = "ワークスペースファイル (*.wsxml)|*.wsxml|すべてのファイル (*.*)|*.*";
-                dialog.DefaultExt = "wsxml";
+                dialog.Filter = "ワークスペースファイル (*.xml)|*.xml|すべてのファイル (*.*)|*.*";
+                dialog.DefaultExt = "xml";
 
                 if (dialog.ShowDialog(this) == DialogResult.OK)
                 {
                     try
                     {
-                        // 既存のペインを全て閉じる
                         CloseAllPanes();
-
-                        // ワークスペースを読み込み
                         _loadingWorkspaceConfig = _workspaceSerializer.Load(dialog.FileName);
-
-                        // DockPanelのレイアウトを復元
-                        _workspaceSerializer.LoadDockPanelLayout(_dockPanel, _loadingWorkspaceConfig.DockPanelLayout, 
+                        _workspaceSerializer.LoadDockPanelLayout(_dockPanel, _loadingWorkspaceConfig.DockPanelLayout,
                             GetContentFromPersistString);
 
                         _currentWorkspaceFile = dialog.FileName;
-                        _loadingWorkspaceConfig = null; // 読み込み完了
+                        _loadingWorkspaceConfig = null;
 
-                        MessageBox.Show($"ワークスペースを読み込みました。\n{dialog.FileName}", "読み込み完了", 
+                        MessageBox.Show($"ワークスペースを読み込みました。\n{dialog.FileName}", "読み込み完了",
                             MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch (Exception ex)
                     {
                         _loadingWorkspaceConfig = null;
-                        MessageBox.Show($"読み込み中にエラーが発生しました。\n{ex.Message}", "エラー", 
+                        MessageBox.Show($"読み込み中にエラーが発生しました。\n{ex.Message}", "エラー",
                             MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
@@ -482,7 +564,7 @@ namespace WindowsFormsApp1
             var contents = _dockPanel.Contents.ToList();
             foreach (var content in contents)
             {
-                if (content is GraphPane || content is RamMonitorViewPane)
+                if (content is GraphPane || content is RamMonitorViewPane || content is MultiLayoutGridPane)
                 {
                     content.DockHandler.Close();
                 }
@@ -491,7 +573,6 @@ namespace WindowsFormsApp1
 
         private IDockContent GetContentFromPersistString(string persistString)
         {
-            // persistString の形式: "GraphPane|パネル名" or "RamMonitorViewPane|パネル名"
             string[] parts = persistString.Split('|');
             if (parts.Length != 2)
             {
@@ -506,7 +587,6 @@ namespace WindowsFormsApp1
                 return null;
             }
 
-            // ワークスペース設定から該当するペインの設定を取得して復元
             if (type == "GraphPane")
             {
                 var paneConfig = _loadingWorkspaceConfig.GraphPanes.Find(p => p.PaneName == paneName);
@@ -527,8 +607,62 @@ namespace WindowsFormsApp1
                     return pane;
                 }
             }
+            else if (type == "MultiLayoutGridPane")
+            {
+                var paneConfig = _loadingWorkspaceConfig.MultiLayoutGridPanes.Find(p => p.PaneName == paneName);
+                if (PaneNameManager.Instance.RegisterCustomName(paneName))
+                {
+                    var pane = new MultiLayoutGridPane(paneName);
+                    if (paneConfig != null)
+                    {
+                        RestoreMultiLayoutGridPaneConfig(pane, paneConfig);
+                    }
+                    return pane;
+                }
+            }
 
             return null;
+        }
+
+        private void RestoreMultiLayoutGridPaneConfig(MultiLayoutGridPane pane, MultiLayoutGridPaneConfig config)
+        {
+            var grid = pane.GridControl;
+            if (grid == null) return;
+
+            var cfg = config.GridConfig;
+            grid.ShowGridLines = cfg.ShowGridLines;
+            grid.GridLineColor = cfg.GridLineColor;
+            grid.BackColor = cfg.BackColor;
+            grid.ForeColor = cfg.ForeColor;
+
+            grid.Rows.Clear();
+
+            foreach (var rowCfg in cfg.Rows.OrderBy(r => r.RowIndex))
+            {
+                var row = new GridRow { Height = rowCfg.Height };
+                foreach (var cellCfg in rowCfg.Cells.OrderBy(c => c.CellIndex))
+                {
+                    var cell = new GridCell
+                    {
+                        Text = cellCfg.Text,
+                        Width = cellCfg.Width,
+                        HorizontalAlignment = (ContentAlignment)cellCfg.HorizontalAlignment,
+                        VerticalAlignment = (ContentAlignment)cellCfg.VerticalAlignment,
+                        ForeColor = cellCfg.HasForeColor ? Color.FromArgb(cellCfg.ForeColorArgb) : null
+                    };
+
+                    if (cellCfg.IsVariable)
+                    {
+                        Random rand = new Random();
+                        cell.ValueProvider = () => rand.Next(0, 100).ToString();
+                    }
+
+                    row.Cells.Add(cell);
+                }
+                grid.Rows.Add(row);
+            }
+
+            grid.RequestRedraw();
         }
 
         private void RestoreGraphPaneConfig(GraphPane pane, GraphPaneConfig config)
@@ -547,7 +681,7 @@ namespace WindowsFormsApp1
             graph.RedrawIntervalMs = cfg.RedrawIntervalMs;
             graph.BackColor = cfg.BackColor;
             graph.GridColor = cfg.GridColor;
-            graph.PlotPadding = new Padding(cfg.PlotPaddingLeft, cfg.PlotPaddingTop, 
+            graph.PlotPadding = new Padding(cfg.PlotPaddingLeft, cfg.PlotPaddingTop,
                 cfg.PlotPaddingRight, cfg.PlotPaddingBottom);
 
             // 既存の系列をクリア
@@ -604,7 +738,7 @@ namespace WindowsFormsApp1
             {
                 allRows.Add((dataRowConfig.RowIndex, new ValueDataRow(
                     dataRowConfig.LabelText,
-                    dataRowConfig.ValueText,
+                    "0", // ValueTextは復元時は初期値
                     dataRowConfig.UnitText
                 )));
             }

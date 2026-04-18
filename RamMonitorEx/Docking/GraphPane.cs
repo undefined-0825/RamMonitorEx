@@ -157,6 +157,9 @@ namespace WindowsFormsApp1
                 series.AddValue(value);
             }
 
+            // 再描画を要求
+            _graphControl.RequestRedraw();
+
             _dataCounter++;
             if (_dataCounter >= 600) _dataCounter = 0; // カウンターリセット
         }
