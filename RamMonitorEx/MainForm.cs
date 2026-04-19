@@ -446,6 +446,10 @@ namespace WindowsFormsApp1
                     {
                         config.MultiLayoutGridPanes.Add(SaveMultiLayoutGridPaneConfig(multiPane));
                     }
+                    else if (content is ElfSymbolPane elfPane)
+                    {
+                        config.ElfSymbolPanes.Add(SaveElfSymbolPaneConfig(elfPane));
+                    }
                 }
 
                 _workspaceSerializer.Save(config, filePath);
@@ -457,6 +461,28 @@ namespace WindowsFormsApp1
                 MessageBox.Show($"保存中にエラーが発生しました。\n{ex.Message}", "エラー",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private ElfSymbolPaneConfig SaveElfSymbolPaneConfig(ElfSymbolPane pane)
+        {
+            var config = new ElfSymbolPaneConfig
+            {
+                PaneName = pane.PaneName,
+                SourceName = pane.SourceName
+            };
+
+            foreach (var symbol in pane.GetSelectedSymbols())
+            {
+                config.Symbols.Add(new ElfSelectedSymbolConfig
+                {
+                    Name = symbol.Name,
+                    Address = symbol.Address,
+                    Size = symbol.Size,
+                    SourceTable = symbol.SourceTable
+                });
+            }
+
+            return config;
         }
 
         private MultiLayoutGridPaneConfig SaveMultiLayoutGridPaneConfig(MultiLayoutGridPane pane)
@@ -699,10 +725,18 @@ namespace WindowsFormsApp1
             }
             else if (type == "ElfSymbolPane")
             {
-                // 現時点ではワークスペースシリアライズ対象外のため空表示で復元
-                if (PaneNameManager.Instance.RegisterCustomName(paneName))
+                var paneConfig = _loadingWorkspaceConfig.ElfSymbolPanes.Find(p => p.PaneName == paneName);
+                if (paneConfig != null && PaneNameManager.Instance.RegisterCustomName(paneName))
                 {
-                    return new ElfSymbolPane(paneName, "(復元)", Array.Empty<ElfSymbolInfo>());
+                    var symbols = paneConfig.Symbols.Select(s => new ElfSymbolInfo
+                    {
+                        Name = s.Name,
+                        Address = s.Address,
+                        Size = s.Size,
+                        SourceTable = s.SourceTable
+                    });
+
+                    return new ElfSymbolPane(paneName, paneConfig.SourceName, symbols);
                 }
             }
 

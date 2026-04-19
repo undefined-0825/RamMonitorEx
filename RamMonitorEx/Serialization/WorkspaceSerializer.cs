@@ -39,19 +39,15 @@ namespace WindowsFormsApp1.Serialization
 
                 using (XmlWriter writer = XmlWriter.Create(filePath, settings))
                 {
-                    // ルート要素を手動で書き込み
                     writer.WriteStartElement("Workspace");
 
-                    // 基本情報
                     writer.WriteElementString("Name", config.Name);
                     writer.WriteElementString("SavedDate", config.SavedDate.ToString("o"));
 
-                    // DockPanelLayoutをCDATAセクションで書き込み
                     writer.WriteStartElement("DockPanelLayout");
                     writer.WriteCData(config.DockPanelLayout);
                     writer.WriteEndElement();
 
-                    // GraphPanes
                     writer.WriteStartElement("GraphPanes");
                     foreach (var pane in config.GraphPanes)
                     {
@@ -59,7 +55,6 @@ namespace WindowsFormsApp1.Serialization
                     }
                     writer.WriteEndElement();
 
-                    // RamMonitorPanes
                     writer.WriteStartElement("RamMonitorPanes");
                     foreach (var pane in config.RamMonitorPanes)
                     {
@@ -67,7 +62,6 @@ namespace WindowsFormsApp1.Serialization
                     }
                     writer.WriteEndElement();
 
-                    // MultiLayoutGridPanes
                     writer.WriteStartElement("MultiLayoutGridPanes");
                     foreach (var pane in config.MultiLayoutGridPanes)
                     {
@@ -75,7 +69,14 @@ namespace WindowsFormsApp1.Serialization
                     }
                     writer.WriteEndElement();
 
-                    writer.WriteEndElement(); // Workspace
+                    writer.WriteStartElement("ElfSymbolPanes");
+                    foreach (var pane in config.ElfSymbolPanes)
+                    {
+                        WriteElfSymbolPane(writer, pane);
+                    }
+                    writer.WriteEndElement();
+
+                    writer.WriteEndElement();
                 }
             }
             catch (Exception ex)
@@ -209,6 +210,25 @@ namespace WindowsFormsApp1.Serialization
             writer.WriteEndElement();
         }
 
+        private void WriteElfSymbolPane(XmlWriter writer, ElfSymbolPaneConfig pane)
+        {
+            writer.WriteStartElement("ElfSymbolPane");
+            writer.WriteAttributeString("PaneName", pane.PaneName);
+            writer.WriteAttributeString("SourceName", pane.SourceName);
+
+            foreach (var symbol in pane.Symbols)
+            {
+                writer.WriteStartElement("Symbol");
+                writer.WriteAttributeString("Name", symbol.Name);
+                writer.WriteAttributeString("Address", symbol.Address.ToString());
+                writer.WriteAttributeString("Size", symbol.Size.ToString());
+                writer.WriteAttributeString("SourceTable", symbol.SourceTable);
+                writer.WriteEndElement();
+            }
+
+            writer.WriteEndElement();
+        }
+
         /// <summary>
         /// XMLファイルからワークスペースを読み込み
         /// </summary>
@@ -254,6 +274,9 @@ namespace WindowsFormsApp1.Serialization
                                     break;
                                 case "MultiLayoutGridPane":
                                     config.MultiLayoutGridPanes.Add(ReadMultiLayoutGridPane(reader));
+                                    break;
+                                case "ElfSymbolPane":
+                                    config.ElfSymbolPanes.Add(ReadElfSymbolPane(reader));
                                     break;
                             }
                         }
@@ -427,6 +450,32 @@ namespace WindowsFormsApp1.Serialization
                 else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "MultiLayoutGridPane")
                 {
                     break;
+                }
+            }
+
+            return config;
+        }
+
+        private ElfSymbolPaneConfig ReadElfSymbolPane(XmlReader reader)
+        {
+            var config = new ElfSymbolPaneConfig
+            {
+                PaneName = reader.GetAttribute("PaneName") ?? string.Empty,
+                SourceName = reader.GetAttribute("SourceName") ?? string.Empty
+            };
+
+            XmlReader subReader = reader.ReadSubtree();
+            while (subReader.Read())
+            {
+                if (subReader.NodeType == XmlNodeType.Element && subReader.Name == "Symbol")
+                {
+                    config.Symbols.Add(new ElfSelectedSymbolConfig
+                    {
+                        Name = subReader.GetAttribute("Name") ?? string.Empty,
+                        Address = ulong.Parse(subReader.GetAttribute("Address") ?? "0"),
+                        Size = ulong.Parse(subReader.GetAttribute("Size") ?? "0"),
+                        SourceTable = subReader.GetAttribute("SourceTable") ?? string.Empty
+                    });
                 }
             }
 

@@ -46,6 +46,13 @@ namespace WindowsFormsApp1.Serialization
         [XmlArray("MultiLayoutGridPanes")]
         [XmlArrayItem("MultiLayoutGridPane")]
         public List<MultiLayoutGridPaneConfig> MultiLayoutGridPanes { get; set; } = new List<MultiLayoutGridPaneConfig>();
+
+        /// <summary>
+        /// ELFシンボルペインのリスト
+        /// </summary>
+        [XmlArray("ElfSymbolPanes")]
+        [XmlArrayItem("ElfSymbolPane")]
+        public List<ElfSymbolPaneConfig> ElfSymbolPanes { get; set; } = new List<ElfSymbolPaneConfig>();
     }
 
     /// <summary>
@@ -375,5 +382,39 @@ namespace WindowsFormsApp1.Serialization
 
         [XmlAttribute]
         public int ForeColorArgb { get; set; }
+    }
+
+    /// <summary>
+    /// ELFシンボルペインの設定
+    /// </summary>
+    public class ElfSymbolPaneConfig
+    {
+        [XmlAttribute]
+        public string PaneName { get; set; } = string.Empty;
+
+        [XmlAttribute]
+        public string SourceName { get; set; } = string.Empty;
+
+        [XmlArray("Symbols")]
+        [XmlArrayItem("Symbol")]
+        public List<ElfSelectedSymbolConfig> Symbols { get; set; } = new List<ElfSelectedSymbolConfig>();
+    }
+
+    /// <summary>
+    /// ELF選択シンボルの設定
+    /// </summary>
+    public class ElfSelectedSymbolConfig
+    {
+        [XmlAttribute]
+        public string Name { get; set; } = string.Empty;
+
+        [XmlAttribute]
+        public ulong Address { get; set; }
+
+        [XmlAttribute]
+        public ulong Size { get; set; }
+
+        [XmlAttribute]
+        public string SourceTable { get; set; } = string.Empty;
     }
 }

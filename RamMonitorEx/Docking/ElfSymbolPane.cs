@@ -45,6 +45,7 @@ namespace WindowsFormsApp1.Docking
         }
 
         public string PaneName => _paneName;
+        public string SourceName => _sourceName;
 
         private void InitializeData()
         {

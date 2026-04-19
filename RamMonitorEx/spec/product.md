@@ -2,59 +2,50 @@
 
 ## 1. 概要
 
-RamMonitorEx は、リアルタイムデータの可視化とモニタリングを行うための Windows デスクトップアプリケーションです。  
-DockPanel を使用したマルチウィンドウ環境で、グラフ表示・数値表示・マルチレイアウトグリッド表示を組み合わせた柔軟なモニタリングが可能です。
+RamMonitorEx は、リアルタイムデータの可視化とモニタリングを行う Windows デスクトップアプリケーションです。  
+DockPanel を使用したマルチウィンドウ環境で、以下の表示を組み合わせて利用できます。
 
-### 1.1 主な機能
-- 折れ線グラフによるリアルタイムデータ可視化
-- 数値テーブルによる詳細データ表示（RamMonitorView）
-- マルチレイアウトグリッド表示（MultiLayoutGridControl）
-- ドッキング可能なペイン（複数ペイン、タブ化、分割表示対応）
-- カスタマイズ可能な表示設定
-- ワークスペースの XML 保存・復元
+- 折れ線グラフ（LineGraph）
+- RAMモニタ表示（RamMonitorView）
+- マルチレイアウトグリッド（MultiLayoutGrid）
+- ELFシンボル専用一覧（ElfSymbolPane）
 
 ---
 
 ## 2. アーキテクチャ
 
 ### 2.1 技術スタック
-- **フレームワーク**: .NET 8.0 (Windows Forms)
-- **ドッキングライブラリ**: DockPanelSuite 3.1.0
-- **言語**: C# 12.0
-- **ターゲット**: Windows Desktop
+- .NET 8.0 (Windows Forms)
+- DockPanelSuite 3.1.0
+- C# 12.0
 
 ### 2.2 プロジェクト構成
 ```
 RamMonitorEx/
 ├── Controls/
 │   ├── LineGraphControl/
-│   │   ├── LineGraphControl.cs
-│   │   └── GraphSeries.cs
 │   ├── RamMonitorView/
-│   │   ├── RamMonitorView.cs
-│   │   ├── IValueViewRow.cs
-│   │   ├── ValueDataRow.cs
-│   │   ├── ValueCommentRow.cs
-│   │   ├── ValueViewColumnLayout.cs
-│   │   ├── ValueTextAlignment.cs
-│   │   └── ValueRowType.cs
 │   └── MultiLayoutGridControl/
-│       ├── MultiLayoutGridControl.cs
-│       ├── GridRow.cs
-│       └── GridCell.cs
 ├── Docking/
 │   ├── GraphPane.cs
 │   ├── RamMonitorViewPane.cs
 │   ├── MultiLayoutGridPane.cs
+│   ├── ElfSymbolPane.cs
 │   └── PaneNameManager.cs
 ├── Forms/
-│   ├── Form1.cs
+│   ├── Form1.cs                 # クラス名は MainForm
+│   ├── Form1.Designer.cs        # partial MainForm
 │   ├── Form2.cs
 │   ├── PaneNameDialog.cs
 │   ├── GraphPropertiesForm.cs
 │   ├── MultiLayoutGridPropertiesForm.cs
 │   ├── RowPropertiesForm.cs
-│   └── CellPropertiesForm.cs
+│   ├── CellPropertiesForm.cs
+│   └── ElfSymbolSelectionForm.cs
+├── ReadElf/
+│   ├── ReadElfParser.cs
+│   ├── ReadElfParserSmokeTest.cs
+│   └── sample_elf_data.elf
 ├── Serialization/
 │   ├── WorkspaceConfig.cs
 │   └── WorkspaceSerializer.cs
@@ -62,142 +53,130 @@ RamMonitorEx/
     ├── product.md
     ├── LineGraphControl.md
     ├── RamMonitorView.md
-    └── MultiLayoutGridControl .md
+    ├── MultiLayoutGridControl .md
+    ├── ReadElf.md
+    └── ToDo.md
 ```
 
 ---
 
-## 3. メインフォーム (Form1)
+## 3. メインフォーム（MainForm）
 
 ### 3.1 概要
-アプリケーションのメインウィンドウ。DockPanel を使用して各ペインを管理します。
+- ファイル配置は `Form1.cs` だが、フォームクラス名は `MainForm`
+- デザイン時クラッシュ回避のため、実行時初期化は `OnLoad` で行う
 
-### 3.2 構成要素
+### 3.2 UI構成
+- MenuStrip（ファイルメニュー）
+- CommandBar（ToolStrip）
+- DockPanel
 
-#### 3.2.1 DockPanel
-- **ライブラリ**: DockPanelSuite 3.1.0
-- **テーマ**: VS2015LightTheme
-- **スタイル**: DocumentStyle.DockingWindow
-
-#### 3.2.2 メニューバー
+### 3.3 メニュー
 **ファイルメニュー**
-- **新規RAMモニタ(R)...** - Ctrl+M
-- **新規グラフ(G)...** - Ctrl+N
-- **新規マルチレイアウトグリッド(L)...**
-- **名前を付けて保存(S)...** - Ctrl+Shift+S
-- **上書き保存(O)** - Ctrl+S
-- **開く(L)...** - Ctrl+O
-- **終了(X)**
+- 新規RAMモニタ(R)...（Ctrl+M）
+- 新規グラフ(G)...（Ctrl+N）
+- 新規マルチレイアウトグリッド(L)...
+- ELFシンボル選択...
+- 名前を付けて保存(S)...（Ctrl+Shift+S）
+- 上書き保存(O)（Ctrl+S）
+- 開く(L)...（Ctrl+O）
+- 終了(X)
 
-※ 各「新規～」は PaneNameDialog 経由で名前指定可能。
-
-### 3.3 初期表示
-- メインフォーム上にサンプル LineGraphControl を1つ表示
-- 0.1秒ごとにサンプルデータ更新
+### 3.4 CommandBar
+- 新規グラフ
+- 新規RAMモニタ
+- 新規マルチレイアウト
+- ELFシンボル選択
+- 開く
+- 保存
 
 ---
 
 ## 4. ドッキングペイン
 
 ### 4.1 GraphPane
-- `DockContent` ベース
-- `LineGraphControl` を内包
-- 動的更新あり
-- 永続化キー: `GraphPane|{PaneName}`
+- `LineGraphControl` を表示
+- デモ系列を自動更新
+- PersistString: `GraphPane|{PaneName}`
 
 ### 4.2 RamMonitorViewPane
-- `DockContent` ベース
-- `RamMonitorView` を内包
-- 1秒更新デモあり
-- 永続化キー: `RamMonitorViewPane|{PaneName}`
+- `RamMonitorView` を表示
+- デモ値を1秒ごと更新
+- PersistString: `RamMonitorViewPane|{PaneName}`
 
 ### 4.3 MultiLayoutGridPane
-- `DockContent` ベース
-- `MultiLayoutGridControl` を内包
-- 初期背景色: Black
-- 初期文字色: White
-- フォント: Regular（太字なし）
-- グリッド線: 初期表示 ON、初期色 Gray
-- 永続化キー: `MultiLayoutGridPane|{PaneName}`
+- `MultiLayoutGridControl` を表示
+- 初期背景: Black / 初期文字色: White / フォント: Regular
+- グリッド線: 初期ON、初期色 Gray
+- PersistString: `MultiLayoutGridPane|{PaneName}`
+
+### 4.4 ElfSymbolPane
+- ELFシンボル表示専用ペイン（DataGridView）
+- 列: 選択, シンボル名, アドレス, サイズ, ソース
+- シンボル名の絞り込み
+- PersistString: `ElfSymbolPane|{PaneName}`
 
 ---
 
-## 5. MultiLayoutGridControl 機能
+## 5. ELF機能
 
-### 5.1 基本
-- 完全カスタム描画（DataGridView 不使用）
-- ダブルバッファリング
-- 行・セルの独立レイアウト
-- `ValueProvider` 対応（可変表示）
+### 5.1 解析
+- `ReadElfParser` による ELF 解析
+- 対応: ELF32/ELF64, Little Endian
+- 取得: Name / Address / Size / SourceTable
 
-### 5.2 操作
-- セル右端ドラッグで列幅変更
-- 右クリックメニュー
-  - プロパティ...
-  - グリッド線を表示（ON/OFF）
-  - 背景色...
-  - 文字色...
-  - グリッド線の色...
+### 5.2 選択画面
+- `ElfSymbolSelectionForm`
+- OpenFileDialog で ELF を選択
+- DataSet + DataView + DataGridView で一覧表示
+- 先頭列チェックボックス「選択」
+- LinkLabel: 全て選択 / 全て選択解除
+- シンボル名フィルタ
+- OK/キャンセル
+- OK時に選択シンボルを呼び出し元へ返却
 
-### 5.3 プロパティ画面
-- グリッド単位: 行の追加・削除・順序変更・高さ変更
-- 行単位: 列の追加・削除・順序変更
-- 列単位: 固定/可変、テキスト、幅、配置、文字色
+### 5.3 選択結果の反映
+- MainForm で選択結果を受け取り、`ElfSymbolPane` を新規作成して表示
 
 ---
 
 ## 6. ワークスペース永続化
 
-### 6.1 ファイル形式
+### 6.1 形式
 - 拡張子: `.xml`
 - UTF-8 XML
 
 ### 6.2 保存対象
-- DockPanel レイアウト（CDATA）
+- DockPanelレイアウト（CDATA）
 - GraphPane 設定
 - RamMonitorViewPane 設定
 - MultiLayoutGridPane 設定
 
-### 6.3 MultiLayoutGrid の保存内容
-- 表示設定: BackColor / ForeColor / ShowGridLines / GridLineColor
-- 行: RowIndex / Height
-- セル: CellIndex / Text / IsVariable / Width / HorizontalAlignment / VerticalAlignment / ForeColor
-
-### 6.4 復元
-- `GetContentFromPersistString` でペイン生成
-- 各 `Restore*Config` で個別設定適用
+### 6.3 備考（ElfSymbolPane）
+- PersistStringによるペイン復元分岐は実装済み
+- ただし、シンボル内容の完全シリアライズ復元は未対応（現状は空データ復元）
 
 ---
 
-## 7. ドッキング機能
-- Document / DockLeft / DockRight / DockTop / DockBottom / Float
-- タブ化、分割、フロートをサポート
-- `HideOnClose = false` のため閉じると破棄
+## 7. ビルド・実行
 
----
-
-## 8. ビルド・実行
-
-### 8.1 環境
-- Visual Studio 2022 以降
-- .NET 8.0 SDK
-
-### 8.2 ビルド
+### 7.1 ビルド
 ```powershell
 dotnet build
 ```
 
-### 8.3 実行
+### 7.2 実行
 ```powershell
 dotnet run
 ```
 
 ---
 
-## 9. 更新履歴
+## 8. 更新履歴
 - 2024-XX-XX: 初版
 - 2024-XX-XX: ワークスペース永続化追加
-- 2024-XX-XX: メニュー整理
-- 2024-XX-XX: MultiLayoutGridControl / MultiLayoutGridPane 追加
-- 2024-XX-XX: MultiLayoutGrid プロパティ編集画面追加
-- 2024-XX-XX: MultiLayoutGrid グリッド線表示ON/OFF・色設定・XMLシリアライズ対応
+- 2024-XX-XX: MultiLayoutGrid 追加
+- 2024-XX-XX: MultiLayoutGrid プロパティ編集追加
+- 2024-XX-XX: MultiLayoutGrid グリッド線ON/OFF・色設定追加
+- 2024-XX-XX: MainForm化、CommandBar追加
+- 2024-XX-XX: ELF解析・シンボル選択画面・専用ペイン追加
